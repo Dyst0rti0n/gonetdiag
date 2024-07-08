@@ -1,21 +1,23 @@
 package traceroute
 
 import (
-    "github.com/aeden/traceroute"
+    "fmt"
     "log"
     "strings"
+
+    "github.com/aeden/traceroute"
 )
 
-func TraceRoute(target string) string {
+func TraceRoute(target string) (string, error) {
     options := &traceroute.TracerouteOptions{}
     result, err := traceroute.Traceroute(target, options)
     if err != nil {
-        log.Fatalf("Failed to perform traceroute: %v", err)
+        return "", fmt.Errorf("failed to perform traceroute: %w", err)
     }
 
     var sb strings.Builder
     for _, hop := range result.Hops {
         sb.WriteString(hop.String() + "\n")
     }
-    return sb.String()
+    return sb.String(), nil
 }

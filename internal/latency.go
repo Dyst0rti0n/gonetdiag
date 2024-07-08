@@ -1,4 +1,4 @@
-package ping
+package latency
 
 import (
     "fmt"
@@ -7,14 +7,15 @@ import (
     "github.com/go-ping/ping"
 )
 
-func Ping(target string, count int, timeout time.Duration) (string, error) {
+func AnalyzeLatency(target string) (string, error) {
     pinger, err := ping.NewPinger(target)
     if err != nil {
         return "", fmt.Errorf("failed to create pinger: %w", err)
     }
 
-    pinger.Count = count
-    pinger.Timeout = timeout
+    pinger.Count = 10
+    pinger.Interval = time.Second
+    pinger.Timeout = 15 * time.Second
 
     err = pinger.Run()
     if err != nil {
@@ -22,5 +23,6 @@ func Ping(target string, count int, timeout time.Duration) (string, error) {
     }
 
     stats := pinger.Statistics()
-    return stats.String(), nil
+    return fmt.Sprintf("Latency to %s: Avg %v, Max %v, Min %v, StdDev %v",
+        target, stats.AvgRtt, stats.MaxRtt, stats.MinRtt, stats.StdDevRtt), nil
 }
