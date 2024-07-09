@@ -41,8 +41,13 @@ func TraceRoute(target string) (string, error) {
             continue
         }
 
+        host, err := net.LookupAddr(addr)
+        if err != nil || len(host) == 0 {
+            host = []string{addr}
+        }
+
         RTT := time.Since(start)
-        sb.WriteString(fmt.Sprintf("%d: %s, RTT = %v\n", ttl, addr, RTT))
+        sb.WriteString(fmt.Sprintf("%d: %s, RTT = %v\n", ttl, host[0], RTT))
         if addr == destAddr.String() {
             break
         }
