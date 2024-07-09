@@ -74,7 +74,10 @@ func main() {
         Args:  cobra.MinimumNArgs(1),
         Run: func(cmd *cobra.Command, args []string) {
             target := args[0]
-            result, err := latency.AnalyzeLatency(target)
+            count, _ := cmd.Flags().GetInt("count")
+            timeout, _ := cmd.Flags().GetDuration("timeout")
+
+            result, err := latency.AnalyzeLatency(target, count, timeout)
             if err != nil {
                 color.Red("Latency analysis error: %v", err)
                 return
@@ -89,7 +92,10 @@ func main() {
         Args:  cobra.MinimumNArgs(1),
         Run: func(cmd *cobra.Command, args []string) {
             target := args[0]
-            result, err := packetloss.DetectPacketLoss(target)
+            count, _ := cmd.Flags().GetInt("count")
+            timeout, _ := cmd.Flags().GetDuration("timeout")
+
+            result, err := packetloss.DetectPacketLoss(target, count, timeout)
             if err != nil {
                 color.Red("Packet loss detection error: %v", err)
                 return
