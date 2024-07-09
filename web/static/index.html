@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Diagnostic Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        canvas {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Network Diagnostic Tool</h1>
+        <div>
+            <label for="target">Target:</label>
+            <input type="text" id="target" placeholder="Enter target IP or domain">
+            <button onclick="startDiagnostics('ping')">Ping</button>
+            <button onclick="startDiagnostics('traceroute')">Traceroute</button>
+            <button onclick="startDiagnostics('bandwidth')">Bandwidth</button>
+            <button onclick="startDiagnostics('latency')">Latency</button>
+            <button onclick="startDiagnostics('packetloss')">Packet Loss</button>
+            <button onclick="startDiagnostics('report')">Report</button>
+        </div>
+        <canvas id="chart" width="400" height="200"></canvas>
+    </div>
+    <script>
+        var ctx = document.getElementById('chart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Network Metrics',
+                    data: [],
+                    backgroundColor: 'rgba(0, 119, 204, 0.3)'
+                }]
+            },
+            options: {}
+        });
+
+        var ws = new WebSocket("ws://localhost:8080/ws");
+        ws.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+            chart.data.labels.push(new Date().toLocaleTimeString());
+            chart.data.datasets[0].data.push(data.value);
+            chart.update();
+        }
+
+        function startDiagnostics(action) {
+            var target = document.getElementById("target").value;
+            if (target) {
+                ws.send(JSON.stringify({ action: action, target: target }));
+            } else {
+                alert("Please enter a target.");
+            }
+        }
+    </script>
+</body>
+</html>

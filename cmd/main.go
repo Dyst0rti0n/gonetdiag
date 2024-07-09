@@ -7,7 +7,6 @@ import (
     "strings"
     "sync"
     "time"
-    
 
     "github.com/Dyst0rti0n/gonetdiag/internal/bandwidth"
     "github.com/Dyst0rti0n/gonetdiag/internal/latency"
@@ -15,12 +14,17 @@ import (
     "github.com/Dyst0rti0n/gonetdiag/internal/ping"
     "github.com/Dyst0rti0n/gonetdiag/internal/report"
     "github.com/Dyst0rti0n/gonetdiag/internal/traceroute"
+    "github.com/Dyst0rti0n/gonetdiag/web"
     "github.com/fatih/color"
     "github.com/spf13/cobra"
 )
 
+var verbose bool
+
 func main() {
     var rootCmd = &cobra.Command{Use: "gonetdiag"}
+
+    rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 
     rootCmd.AddCommand(&cobra.Command{
         Use:   "ping [target]",
@@ -59,22 +63,24 @@ func main() {
     })
 
     rootCmd.AddCommand(&cobra.Command{
-        Use:   "bandwidth [target]",
+        Use:   "bandwidth [target] [protocol]",
         Short: "Measure bandwidth to a target",
-        Args:  cobra.MinimumNArgs(1),
+        Args:  cobra.MinimumNArgs(2),
         Run: func(cmd *cobra.Command, args []string) {
             target := args[0]
-            protocol, _ := cmd.Flags().GetString("protocol")
-            if protocol == "" {
-                protocol = "http"
-            }
-
-            result, err := bandwidth.MeasureDownloadBandwidth(target, protocol)
+            protocol := args[1]
+            uploadResult, err := bandwidth.MeasureUploadBandwidth(target)
             if err != nil {
-                color.Red("Bandwidth measurement error: %v", err)
+                color.Red("Upload Bandwidth measurement error: %v", err)
                 return
             }
-            color.Cyan("Bandwidth Result:\n%s", result)
+            downloadResult, err := bandwidth.MeasureDownloadBandwidth(target, protocol)
+            if err != nil {
+                color.Red("Download Bandwidth measurement error: %v", err)
+                return
+            }
+            color.Cyan("Upload Bandwidth Result:\n%s", uploadResult)
+            color.Cyan("Download Bandwidth Result:\n%s", downloadResult)
         },
     })
 
@@ -139,7 +145,17 @@ func main() {
 
             go func() {
                 defer wg.Done()
-                bandwidthResult, bandwidthErr = bandwidth.MeasureUploadBandwidth(target)
+                uploadResult, uploadErr := bandwidth.MeasureUploadBandwidth(target)
+                if uploadErr != nil {
+                    bandwidthErr = uploadErr
+                    return
+                }
+                downloadResult, downloadErr := bandwidth.MeasureDownloadBandwidth(target, "http")
+                if downloadErr != nil {
+                    bandwidthErr = downloadErr
+                    return
+                }
+                bandwidthResult = fmt.Sprintf("%s\n%s", uploadResult, downloadResult)
             }()
 
             go func() {
@@ -290,6 +306,13 @@ func main() {
             }
         },
     })
+
+    router := web.SetupRouter()
+    go func() {
+        if err := router.Run(":8080"); err != nil {
+            color.Red("Failed to run web server: %v", err)
+        }
+    }()
 
     if err := rootCmd.Execute(); err != nil {
         color.Red("CLI error: %v", err)
